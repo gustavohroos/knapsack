@@ -1,24 +1,35 @@
 import numpy as np
 from itertools import product
 import time
+import os
 
-with open('data/p01/p01_c.txt') as f:
-    MAX_WEIGHT = int(f.readline())
+all_weights = []
+max_weights = []
+all_values = []
+all_solutions = []
 
-with open('data/p01/p01_w.txt') as f:
-    weights = np.array([int(x) for x in f.readlines()])
+for i in range(len(os.listdir('data'))):
 
-with open('data/p01/p01_p.txt') as f:
-    values = np.array([int(x) for x in f.readlines()])
+    with open(f'data/p0{i+1}/p0{i+1}_c.txt', 'r') as f:
+        max_weights.append(int(f.read()))
 
-with open('data/p01/p01_s.txt') as f:
-    solution = np.array([int(x) for x in f.readlines()])
+    with open(f'data/p0{i+1}/p0{i+1}_w.txt', 'r') as f:
+        weights = np.array([int(x) for x in f.readlines()])
+        all_weights.append(weights.astype(int))
 
-print('Max weight: ', MAX_WEIGHT)
-print('Weights: ', weights)
-print('Values: ', values)
-print('Solution: ', solution)
+    with open(f'data/p0{i+1}/p0{i+1}_p.txt', 'r') as f:
+        values = np.array([int(x) for x in f.readlines()])
+        all_values.append(values.astype(int))
+    
+    with open(f'data/p0{i+1}/p0{i+1}_s.txt', 'r') as f:
+        solution = np.array([int(x) for x in f.readlines()])
+        all_solutions.append(solution.astype(int))
 
+    print('Problem: ', i+1)
+    print('Max weight: ', max_weights[i])
+    print('Weights: ', all_weights[i])
+    print('Values: ', all_values[i])
+    print('Solution: ', all_solutions[i])
 
 def bruteforce(weights, values, max_weight):
     n = len(weights)
@@ -38,11 +49,19 @@ def bruteforce(weights, values, max_weight):
     
     return time.time() - start, max_value, final_weight, best_items
 
-total_time, max_value, final_weight, best_items = bruteforce(weights, values, MAX_WEIGHT)
+for i in range(len(os.listdir('data'))):
+    weights = all_weights[i]
+    values = all_values[i]
+    solution = all_solutions[i]
+    MAX_WEIGHT = max_weights[i]
 
-print('Max value: ', max_value)
-print('Final weight: ', final_weight)
-print('Best items: ', best_items)
-print('Total time: ', total_time)
+    total_time, max_value, final_weight, best_items = bruteforce(weights, values, MAX_WEIGHT)
 
-print('Equals solution? ', (solution == best_items).all())
+    print('Problem: ', i+1)
+    print('Max weight: ', MAX_WEIGHT)
+    print('Best value: ', max_value)
+    print('Final weight: ', final_weight)
+    print('Best items: ', best_items)
+    print('Total time: ', total_time)
+
+    print('Equals solution? ', (solution == best_items).all())
