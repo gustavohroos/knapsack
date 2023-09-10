@@ -101,6 +101,35 @@ def dinamica(N, W, values, weights):
  
     return dp[N][W], time.time() - time_start
 
+def greedy(N, W, values, weights):
+    time_start = time.time()
+
+    # sorting
+    value_per_weight = np.array(values) / np.array(weights)
+    indexes = np.argsort(value_per_weight)[::-1]
+    values = values[indexes]
+    weights = weights[indexes]
+
+    W_ = W
+    value = 0
+    j_ = 0
+    knapsack = np.zeros(N)
+    for j in range(N):
+        if weights[j] > W_:
+            knapsack[j] = 0
+        else:
+            knapsack[j] = 1
+            W_ = W_ - weights[j]
+            value = value + values[j]
+        if values[j] > values[j_]:
+            j_ = j
+    if values[j_] > value:
+        value = values[j_]
+        for j in range(N):
+            knapsack[j] = 0
+            knapsack[j_] = 1
+
+    return value, time.time() - time_start
 
 if __name__ == '__main__':
 
@@ -115,12 +144,15 @@ if __name__ == '__main__':
     weights_2, values_2, max_weight_2 = read_file(path_2)
     weights_3, values_3, max_weight_3 = read_file(path_3)
 
-
+    """ print("Dinamica")
     print(dinamica(len(weights_1), max_weight_1, values_1, weights_1), len(weights_1))
     print(dinamica(len(weights_2), max_weight_2, values_2, weights_2), len(weights_2))
-    print(dinamica(len(weights_3), max_weight_3, values_3, weights_3), len(weights_3))
+    print(dinamica(len(weights_3), max_weight_3, values_3, weights_3), len(weights_3)) """
 
-
+    print("Greedy")
+    print(greedy(len(weights_1), max_weight_1, values_1, weights_1), len(weights_1))
+    print(greedy(len(weights_2), max_weight_2, values_2, weights_2), len(weights_2))
+    print(greedy(len(weights_3), max_weight_3, values_3, weights_3), len(weights_3))
     # total_time, max_value, final_weight, best_items = bruteforce(weights, values, max_weight)
 
     # print('Max weight: ', max_weight)
