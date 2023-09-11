@@ -2,6 +2,8 @@ import numpy as np
 from itertools import product
 import time
 import os
+import argparse
+import pandas as pd
 
 def load_data():
 
@@ -55,7 +57,7 @@ def read_file(path):
     weights = []
     values = []
     
-    with open(path) as f:
+    with open(f'instances_01_KP/large_scale/{path}') as f:
         header = f.readline()
         max_weight = int(header.split()[1])
         file = f.readlines()
@@ -80,7 +82,6 @@ def read_file(path):
         
     value = calculate_value(weights, values, max_weight, solution)
 
-    print(value)
 
     return np.array(weights), np.array(values), max_weight
 
@@ -98,8 +99,10 @@ def dinamica(N, W, values, weights):
             else:
                 dp[i][j] = max(values[i-1] + dp[i-1]
                                [j-weights[i-1]], dp[i-1][j])
+                
+    value, weight = dp[N][W], W
  
-    return dp[N][W], time.time() - time_start
+    return time.time() - time_start, value, weight, dp[N][W]
 
 def greedy(N, W, values, weights):
     time_start = time.time()
@@ -129,30 +132,69 @@ def greedy(N, W, values, weights):
             knapsack[j] = 0
             knapsack[j_] = 1
 
-    return value, time.time() - time_start
+    return time.time() - time_start, value, W_, knapsack
 
 if __name__ == '__main__':
 
-    problems = load_data()
+    args = argparse.ArgumentParser()
+    args.add_argument('--file', type=str)
+    args.add_argument('--algorithm', type=str)
+
+    args = args.parse_args()
+
+    print('Running file: ', args.file)
+    print('Running algorithm: ', args.algorithm)
+
+    weights, values, max_weight = read_file(args.file)
 
 
-    path_1 = "instances_01_KP/large_scale/knapPI_1_1000_1000_1"
-    path_2 = "instances_01_KP/large_scale/knapPI_2_1000_1000_1"
-    path_3 = "instances_01_KP/large_scale/knapPI_3_1000_1000_1"
+    if args.algorithm == 'bruteforce':
+        total_time, max_value, final_weight, best_items = bruteforce(weights, values, max_weight)
+    elif args.algorithm == 'dynamic':
+        total_time, max_value, final_weight, best_items = dinamica(len(weights), max_weight, values, weights)
+    elif args.algorithm == 'greedy':
+        total_time, max_value, final_weight, best_items = greedy(len(weights), max_weight, values, weights)
+    else:
+        print('Invalid algorithm')
+        exit()
 
-    weights_1, values_1, max_weight_1 = read_file(path_1)
-    weights_2, values_2, max_weight_2 = read_file(path_2)
-    weights_3, values_3, max_weight_3 = read_file(path_3)
+    print('Max weight: ', max_weight)
+    print('Best value: ', max_value)
+    print('Final weight: ', final_weight)
+    print('Best items: ', best_items)
+    print('Total time: ', total_time)
+
+    df = pd.DataFrame({'file':{},'algorithm':{}, 'time':{}, 'max_value':{}})
+    
+    df = pd.concat([df, pd.DataFrame({'file':args.file,'algorithm':args.algorithm, 'time':total_time, 'max_value':max_value}, index=[0])])
+
+    if os.path.exists('results.csv'):
+        df = pd.concat([pd.read_csv('results.csv'), df], ignore_index=True)
+        pd.DataFrame(df).to_csv('results.csv', index=False)
+    else:
+        df.to_csv('results.csv', index=False, header=True)
+
+
+    # problems = load_data()
+
+
+    # path_1 = "instances_01_KP/large_scale/knapPI_1_1000_1000_1"
+    # path_2 = "instances_01_KP/large_scale/knapPI_2_1000_1000_1"
+    # path_3 = "instances_01_KP/large_scale/knapPI_3_1000_1000_1"
+
+    # weights_1, values_1, max_weight_1 = read_file(path_1)
+    # weights_2, values_2, max_weight_2 = read_file(path_2)
+    # weights_3, values_3, max_weight_3 = read_file(path_3)
 
     """ print("Dinamica")
     print(dinamica(len(weights_1), max_weight_1, values_1, weights_1), len(weights_1))
     print(dinamica(len(weights_2), max_weight_2, values_2, weights_2), len(weights_2))
     print(dinamica(len(weights_3), max_weight_3, values_3, weights_3), len(weights_3)) """
 
-    print("Greedy")
-    print(greedy(len(weights_1), max_weight_1, values_1, weights_1), len(weights_1))
-    print(greedy(len(weights_2), max_weight_2, values_2, weights_2), len(weights_2))
-    print(greedy(len(weights_3), max_weight_3, values_3, weights_3), len(weights_3))
+    # print("Greedy")
+    # print(greedy(len(weights_1), max_weight_1, values_1, weights_1), len(weights_1))
+    # print(greedy(len(weights_2), max_weight_2, values_2, weights_2), len(weights_2))
+    # print(greedy(len(weights_3), max_weight_3, values_3, weights_3), len(weights_3))
     # total_time, max_value, final_weight, best_items = bruteforce(weights, values, max_weight)
 
     # print('Max weight: ', max_weight)
