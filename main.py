@@ -162,7 +162,7 @@ if __name__ == '__main__':
     print('Total time: ', total_time)
 
     df = pd.DataFrame({'file': {}, 'algorithm': {},
-                      'time': {}, 'max_value': {}})
+                      'time': {}, 'value': {}})
 
     df = pd.concat([df, pd.DataFrame(
         {'file': args.file, 'algorithm': args.algorithm, 'time': total_time, 'value': value}, index=[0])])
