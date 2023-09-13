@@ -6,7 +6,6 @@ import argparse
 import pandas as pd
 
 def load_data():
-
     problems = {i+1: {} for i in range(len(os.listdir('data')))}
 
     for i in range(len(os.listdir('data'))):
@@ -27,32 +26,15 @@ def load_data():
 
     return problems
 
-def bruteforce(weights, values, max_weight):
+def calculate_value(weights, values, max_weight, combination):
+    weight = np.sum(combination * weights)
+    value = np.sum(combination * values)
 
-    def calculate_value(weights, values, max_weight, combination):
-        weight = np.sum(combination * weights)
-        value = np.sum(combination * values)
+    if weight > max_weight:
+        return 0, 0
 
-        if weight > max_weight:
-            return 0, 0
-        else:
-            return value, weight
-        
-    max_value = 0
-    final_weight = 0
-    best_items = np.zeros(len(weights), dtype=int)
-    start = time.time()
-
-    for combination in product([0, 1], repeat=len(weights)):
-        value, weight = calculate_value(weights, values, max_weight, np.array(combination))
-
-        if value > max_value:
-            final_weight = weight
-            max_value = value
-            best_items = np.array(combination)
+    return weight, value
     
-    return time.time() - start, max_value, final_weight, best_items
-
 def read_file(path):
     weights = []
     values = []
@@ -70,26 +52,32 @@ def read_file(path):
         v, w = line.split()
         weights.append(int(w))
         values.append(int(v))
-
-    def calculate_value(weights, values, max_weight, combination):
-        weight = np.sum(combination * weights)
-        value = np.sum(combination * values)
-
-        if weight > max_weight:
-            return 0, 0
-
-        return weight, value
         
-    value = calculate_value(weights, values, max_weight, solution)
+    with open(f"instances_01_KP/large_scale-optimum/{path}") as f:
+        value = int(f.readline())
 
+    return np.array(weights), np.array(values), max_weight, value
 
-    return np.array(weights), np.array(values), max_weight
+def bruteforce(W, values, weights):        
+    max_value = 0
+    final_weight = 0
+    best_items = np.zeros(len(weights), dtype=int)
+    start = time.time()
 
+    for combination in product([0, 1], repeat=len(weights)):
+        value, weight = calculate_value(weights, values, W, np.array(combination))
 
-def dinamica(N, W, values, weights):
+        if value > max_value:
+            final_weight = weight
+            max_value = value
+            best_items = np.array(combination)
+    
+    return time.time() - start, max_value, final_weight, best_items
+
+def dynamic(W, values, weights):
 
     time_start = time.time()
-
+    N = len(values)
     dp = [[0 for _ in range(W + 1)] for _ in range(N + 1)]
  
     for i in range(1, N + 1):
@@ -101,19 +89,19 @@ def dinamica(N, W, values, weights):
                                [j-weights[i-1]], dp[i-1][j])
                 
     value, weight = dp[N][W], W
- 
     return time.time() - time_start, value, weight, dp[N][W]
 
-def greedy(N, W, values, weights):
+def greedy(W, values, weights):
     time_start = time.time()
+    N = len(values)
 
     # sorting
-    value_per_weight = np.array(values) / np.array(weights)
+    value_per_weight = values / weights
     indexes = np.argsort(value_per_weight)[::-1]
-    values = values[indexes]
+    values = values[indexes] 
     weights = weights[indexes]
 
-    W_ = W
+    remainingW = W
     value = 0
     j_ = 0
     knapsack = np.zeros(N)
@@ -122,7 +110,7 @@ def greedy(N, W, values, weights):
             knapsack[j] = 0
         else:
             knapsack[j] = 1
-            W_ = W_ - weights[j]
+            remainingW = remainingW - weights[j]
             value = value + values[j]
         if values[j] > values[j_]:
             j_ = j
@@ -132,7 +120,16 @@ def greedy(N, W, values, weights):
             knapsack[j] = 0
             knapsack[j_] = 1
 
-    return time.time() - time_start, value, W_, knapsack
+    return time.time() - time_start, value, W - remainingW, knapsack
+
+def fptas(W, values, weights, epsilon):
+    N = len(values)
+    max_value = np.max(values)
+    scaling_factor = (epsilon * max_value) / N
+    scaled_values = np.ceil(values / scaling_factor)
+    #scaled_capacity = int(np.ceil(W / scaling_factor))
+    
+    return dynamic(W, scaled_values, weights)
 
 if __name__ == '__main__':
 
@@ -145,15 +142,17 @@ if __name__ == '__main__':
     print('Running file: ', args.file)
     print('Running algorithm: ', args.algorithm)
 
-    weights, values, max_weight = read_file(args.file)
+    weights, values, max_weight, max_value = read_file(args.file)
 
 
     if args.algorithm == 'bruteforce':
-        total_time, max_value, final_weight, best_items = bruteforce(weights, values, max_weight)
+        total_time, value, final_weight, best_items = bruteforce(max_weight, values, weights)
     elif args.algorithm == 'dynamic':
-        total_time, max_value, final_weight, best_items = dinamica(len(weights), max_weight, values, weights)
+        total_time, value, final_weight, best_items = dynamic(max_weight, values, weights)
     elif args.algorithm == 'greedy':
-        total_time, max_value, final_weight, best_items = greedy(len(weights), max_weight, values, weights)
+        total_time, value, final_weight, best_items = greedy(max_weight, values, weights)
+    elif args.algorithm == 'fptas':
+        total_time, value, final_weight, best_items = fptas(max_weight, values, weights, 0.1)
     else:
         print('Invalid algorithm')
         exit()
@@ -161,7 +160,8 @@ if __name__ == '__main__':
     print('Max weight: ', max_weight)
     print('Best value: ', max_value)
     print('Final weight: ', final_weight)
-    print('Best items: ', best_items)
+    print('Final value: ', value)
+    #print('Best items: ', best_items)
     print('Total time: ', total_time)
 
     df = pd.DataFrame({'file':{},'algorithm':{}, 'time':{}, 'max_value':{}})
@@ -186,10 +186,10 @@ if __name__ == '__main__':
     # weights_2, values_2, max_weight_2 = read_file(path_2)
     # weights_3, values_3, max_weight_3 = read_file(path_3)
 
-    """ print("Dinamica")
-    print(dinamica(len(weights_1), max_weight_1, values_1, weights_1), len(weights_1))
-    print(dinamica(len(weights_2), max_weight_2, values_2, weights_2), len(weights_2))
-    print(dinamica(len(weights_3), max_weight_3, values_3, weights_3), len(weights_3)) """
+    """ print("dynamic")
+    print(dynamic(len(weights_1), max_weight_1, values_1, weights_1), len(weights_1))
+    print(dynamic(len(weights_2), max_weight_2, values_2, weights_2), len(weights_2))
+    print(dynamic(len(weights_3), max_weight_3, values_3, weights_3), len(weights_3)) """
 
     # print("Greedy")
     # print(greedy(len(weights_1), max_weight_1, values_1, weights_1), len(weights_1))
