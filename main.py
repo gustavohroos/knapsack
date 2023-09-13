@@ -34,7 +34,7 @@ def read_file(filename):
                 file = file[:-1]
 
         for line in file:
-            w, v = line.split()
+            v, w = line.split()
             weights.append(int(w))
             values.append(int(v))
 
