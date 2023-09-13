@@ -176,7 +176,10 @@ if __name__ == '__main__':
     df = pd.concat([df, pd.DataFrame(
         {'file': args.file, 'algorithm': args.algorithm, 'time': total_time, 'value': value}, index=[0])])
 
-    filename = 'results_low.csv'
+    if int(args.file.split('_')[1]) > 3:
+        filename = f'results_low.csv'
+    else:
+        filename = f'results_large.csv'
 
     if os.path.exists(filename):
         df = pd.concat([pd.read_csv(filename), df], ignore_index=True)
