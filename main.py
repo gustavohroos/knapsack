@@ -20,7 +20,7 @@ def read_file(filename):
     weights = []
     values = []
 
-    if filename.split('_')[1] < '25':
+    if int(filename.split('_')[1]) > 3:
         instance_size = 'low'
     else:
         instance_size = 'large'
@@ -80,7 +80,16 @@ def dynamic(W, weights, values):
                                [j-weights[i-1]], dp[i-1][j])
 
     value, weight = dp[N][W], W
-    return time.time() - time_start, value, weight, dp[N][W]
+
+    selected_items = np.zeros(N)
+    i, j = N, W
+    while i > 0 and j > 0:
+        if dp[i][j] != dp[i - 1][j]:
+            selected_items[i - 1] = 1
+            j -= weights[i - 1]
+        i -= 1
+
+    return time.time() - time_start, value, weight, selected_items
 
 
 def greedy(W, weights, values):
@@ -130,7 +139,7 @@ if __name__ == '__main__':
     args = argparse.ArgumentParser()
     args.add_argument('--file', type=str)
     args.add_argument('--algorithm', type=str)
-
+    
     args = args.parse_args()
 
     print('Running file: ', args.file)
@@ -157,7 +166,7 @@ if __name__ == '__main__':
     print('Max weight: ', max_weight)
     print('Best value: ', max_value)
     print('Final weight: ', final_weight)
-    print('Final value: ', value)
+    print('Final value: ', np.sum(best_items * values))
     # print('Best items: ', best_items)
     print('Total time: ', total_time)
 
