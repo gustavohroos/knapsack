@@ -5,7 +5,6 @@ import os
 import argparse
 import pandas as pd
 
-
 def calculate_value(weights, values, max_weight, combination):
     weight = np.sum(combination * weights)
     value = np.sum(combination * values)
@@ -34,7 +33,7 @@ def read_file(filename):
                 file = file[:-1]
 
         for line in file:
-            w, v = line.split()
+            v, w = line.split()
             weights.append(int(w))
             values.append(int(v))
 
@@ -123,16 +122,56 @@ def greedy(W, weights, values):
 
     return time.time() - time_start, value, W - remainingW, knapsack
 
+def base_profit(value, weight, s):
+    if weight == 0:
+        return 0
+    return value if s >= weight else 0
 
-def fptas(W, weights, values, epsilon):
+def min_dynamic(W, weights, values): # O = (n² * Vmax)
     N = len(values)
     max_value = np.max(values)
-    scaling_factor = (epsilon * max_value) / N
-    scaled_values = np.ceil(values / scaling_factor)
-    # scaled_capacity = int(np.ceil(W / scaling_factor))
+    max_weight = np.max(weights)
 
-    return dynamic(W, weights, scaled_values)
+    table = [[0 for _ in range(N * max_value + 1)] for _ in range(N)]
 
+    val = 1
+    while val <= values[0]:
+        table[0][val] = weights[0]
+        val += 1
+    
+    val = values[0] + 1
+    while val <= N * max_value:
+        table[0][val] = np.iinfo(np.int32).max - max_weight
+        val += 1
+
+    for i in range(1, N):
+        for j in range(1, N * max_value + 1):
+            new_target = max(0, j - values[i])
+            if table[i - 1][j] <= table[i - 1][new_target] + weights[i]:
+                table[i][j] = table[i - 1][j]
+            else:
+                table[i][j] = table[i - 1][new_target] + weights[i]
+
+    result = -1
+    for i in range(N * max_value + 1):
+        if table[N - 1][i] > W:
+            result = i - 1
+            break
+
+    return result
+
+def fptas(W, weights, values, epsilon): # O = (n² * Vmax)
+    time_start = time.time()
+
+    N = len(values)
+    max_value = np.max(values)
+
+    scaling_factor = np.ceil((epsilon * max_value) / N)
+    scaled_values = np.uint32(np.floor_divide(values, scaling_factor))
+
+    result = min_dynamic(W, weights, scaled_values)
+
+    return time.time() - time_start, result, W, np.zeros(N)
 
 if __name__ == '__main__':
 
@@ -158,15 +197,15 @@ if __name__ == '__main__':
             max_weight, weights, values)
     elif args.algorithm == 'fptas':
         total_time, value, final_weight, best_items = fptas(
-            max_weight, weights, values, 0.1)
+            max_weight, weights, values, 0.5)
     else:
         print('Invalid algorithm')
         exit()
 
     print('Max weight: ', max_weight)
-    print('Best value: ', max_value)
     print('Final weight: ', final_weight)
-    print('Final value: ', np.sum(best_items * values))
+    print('Best value: ', max_value)
+    print('Final value: ', value)
     # print('Best items: ', best_items)
     print('Total time: ', total_time)
 
@@ -176,10 +215,7 @@ if __name__ == '__main__':
     df = pd.concat([df, pd.DataFrame(
         {'file': args.file, 'algorithm': args.algorithm, 'time': total_time, 'value': value}, index=[0])])
 
-    if int(args.file.split('_')[1]) > 3:
-        filename = f'results_low.csv'
-    else:
-        filename = f'results_large.csv'
+    filename = 'results_low.csv'
 
     if os.path.exists(filename):
         df = pd.concat([pd.read_csv(filename), df], ignore_index=True)
