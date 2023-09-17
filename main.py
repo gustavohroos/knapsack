@@ -5,6 +5,7 @@ import os
 import argparse
 import pandas as pd
 
+
 def calculate_value(weights, values, max_weight, combination):
     weight = np.sum(combination * weights)
     value = np.sum(combination * values)
@@ -103,31 +104,34 @@ def greedy(W, weights, values):
 
     remainingW = W
     value = 0
-    j_ = 0
     knapsack = np.zeros(N)
-    for j in range(N):
-        if weights[j] > remainingW:
-            knapsack[j] = 0
+    first = False
+    didnt_fit = 0
+    for i in range(N):
+        if weights[i] <= remainingW:
+            knapsack[i] = 1
+            remainingW = remainingW - weights[i]
+            value = value + values[i]
         else:
-            knapsack[j] = 1
-            remainingW = remainingW - weights[j]
-            value = value + values[j]
-        if values[j] > values[j_]:
-            j_ = j
-    if values[j_] > value:
-        value = values[j_]
-        for j in range(N):
-            knapsack[j] = 0
-            knapsack[j_] = 1
+            if not first and weights[i] <= W:
+                didnt_fit = i
+                first = True
+    if values[didnt_fit] > value and weights[didnt_fit] <= W:
+        value = values[didnt_fit]
+        for i in range(N):
+            knapsack[i] = 0
+            knapsack[didnt_fit] = 1
 
     return time.time() - time_start, value, W - remainingW, knapsack
+
 
 def base_profit(value, weight, s):
     if weight == 0:
         return 0
     return value if s >= weight else 0
 
-def min_dynamic(W, weights, values): # O = (n² * Vmax)
+
+def min_dynamic(W, weights, values):  # O = (n² * Vmax)
     N = len(values)
     max_value = np.max(values)
     max_weight = np.max(weights)
@@ -138,7 +142,7 @@ def min_dynamic(W, weights, values): # O = (n² * Vmax)
     while val <= values[0]:
         table[0][val] = weights[0]
         val += 1
-    
+
     val = values[0] + 1
     while val <= N * max_value:
         table[0][val] = np.iinfo(np.int32).max - max_weight
@@ -160,7 +164,8 @@ def min_dynamic(W, weights, values): # O = (n² * Vmax)
 
     return result
 
-def fptas(W, weights, values, epsilon): # O = (n² * Vmax)
+
+def fptas(W, weights, values, epsilon):  # O = (n² * Vmax)
     time_start = time.time()
 
     N = len(values)
@@ -173,12 +178,13 @@ def fptas(W, weights, values, epsilon): # O = (n² * Vmax)
 
     return time.time() - time_start, result, W, np.zeros(N)
 
+
 if __name__ == '__main__':
 
     args = argparse.ArgumentParser()
     args.add_argument('--file', type=str)
     args.add_argument('--algorithm', type=str)
-    
+
     args = args.parse_args()
 
     print('Running file: ', args.file)
